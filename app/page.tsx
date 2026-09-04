@@ -4,7 +4,7 @@ import { HeroBanner } from '@/components/HeroBanner';
 import { PokedexBrowser } from '@/components/PokedexBrowser';
 import { PokemonCardSkeleton } from '@/components/PokemonCard';
 import { GENERATIONS } from '@/lib/constants';
-import { VERSION_GROUPS, queryPokedex, type SortKey } from '@/lib/pokedex';
+import { GAMES_WITH_DEX, queryPokedex, type SortKey } from '@/lib/pokedex';
 
 export const revalidate = 86400;
 
@@ -56,7 +56,7 @@ export default function HomePage({ searchParams }: PageProps) {
         <PokedexBrowser
           initialItems={results.slice(0, 48)}
           initialTotal={results.length}
-          versionGroups={VERSION_GROUPS}
+          versionGroups={GAMES_WITH_DEX}
         />
       </Suspense>
     </>

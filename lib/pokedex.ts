@@ -1,5 +1,6 @@
 import index from '@/data/pokedex-index.json';
 import versionGroupsData from '@/data/version-groups.json';
+import gameDexData from '@/data/game-dex.json';
 import type { PokedexIndexEntry, StatKey } from '@/types/pokemon';
 import { STAT_KEYS } from '@/lib/constants';
 
@@ -16,6 +17,36 @@ export const POKEDEX: PokedexIndexEntry[] = index as unknown as PokedexIndexEntr
 export const VERSION_GROUPS: VersionGroup[] = versionGroupsData as VersionGroup[];
 
 export const VERSION_GROUP_MAP = new Map(VERSION_GROUPS.map((vg) => [vg.name, vg]));
+
+/**
+ * Pokedex regional de cada juego: los Pokemon que aparecen NATIVAMENTE ahi.
+ *
+ * Es distinto de `entry.versionGroups`, que sale del learnset: un juego de
+ * Gen III tiene datos de movimientos de las tres generaciones anteriores
+ * completas aunque en el juego solo se consigan los 202 de la dex de Hoenn.
+ */
+const GAME_DEX = gameDexData as Record<string, number[]>;
+
+const GAME_DEX_SETS = new Map<string, Set<number>>(
+  Object.entries(GAME_DEX).map(([group, ids]) => [group, new Set(ids)]),
+);
+
+const BY_ID = new Map(POKEDEX.map((entry) => [entry.id, entry]));
+
+/** Juegos para los que sabemos que Pokemon aparecen nativamente. */
+export const GAMES_WITH_DEX: (VersionGroup & { nativeCount: number })[] = VERSION_GROUPS.filter(
+  (vg) => GAME_DEX_SETS.has(vg.name),
+)
+  .map((vg) => ({ ...vg, nativeCount: GAME_DEX_SETS.get(vg.name)?.size ?? 0 }))
+  .sort((a, b) => a.order - b.order);
+
+/** True si el Pokemon aparece nativamente en ese juego. */
+export function appearsInGame(id: number, versionGroup: string): boolean {
+  const dex = GAME_DEX_SETS.get(versionGroup);
+  // Sin dex regional (Colosseum y XD) caemos al learnset, que es lo unico que hay.
+  if (!dex) return BY_ID.get(id)?.versionGroups.includes(versionGroup) ?? false;
+  return dex.has(id);
+}
 
 export function versionGroupLabel(name: string): string {
   return VERSION_GROUP_MAP.get(name)?.label ?? name;
@@ -61,7 +92,7 @@ export function queryPokedex(query: PokedexQuery): PokedexIndexEntry[] {
   let result = POKEDEX.filter((entry) => {
     if (query.generation && entry.generation !== query.generation) return false;
     if (types.length && !types.every((t) => entry.types.includes(t as never))) return false;
-    if (query.versionGroup && !entry.versionGroups.includes(query.versionGroup)) return false;
+    if (query.versionGroup && !appearsInGame(entry.id, query.versionGroup)) return false;
     if (term) {
       const matchesName = normalize(entry.name).includes(term);
       const matchesId = String(entry.id) === term || String(entry.id).padStart(3, '0') === term;

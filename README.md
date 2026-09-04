@@ -14,7 +14,9 @@ Sin API keys, sin base de datos y sin variables de entorno.
 - **Pokédex completa** — 1025 Pokémon con grid paginado por scroll infinito.
 - **Buscador con autocompletado** por nombre, número o tipo, navegable con teclado.
 - **Filtros combinables** de tipo (hasta dos), generación y juego, más ordenamiento por
-  cualquier estadística base. Todo el estado vive en la URL, así que las búsquedas son
+  cualquier estadística base. El filtro de juego usa la **Pokédex regional**: Esmeralda muestra
+  los 202 de Hoenn, no los 386 que existen en los datos del cartucho. El de generación muestra
+  los introducidos en esa generación. Todo el estado vive en la URL, así que las búsquedas son
   compartibles y el botón "atrás" funciona.
 - **Ficha de detalle** con tipos, debilidades/resistencias/inmunidades ya combinadas,
   estadísticas base, habilidades (incluidas las ocultas), sprites (pixel, shiny, animado y
@@ -61,6 +63,7 @@ La decisión central del proyecto: **no pegarle a PokeAPI en cada interacción d
 | Índice de 1025 Pokémon (id, nombre, tipos, generación, stats, juegos) | `data/pokedex-index.json` (326 KB) | `npm run seed`, commiteado al repo |
 | Catálogo de 937 movimientos (tipo, categoría, potencia, precisión, PP) | `data/moves.json` (117 KB) | `npm run seed` |
 | 32 grupos de versión | `data/version-groups.json` | `npm run seed` |
+| Pokédex regional de 30 juegos (quién aparece nativamente en cada uno) | `data/game-dex.json` (29 KB) | `npm run seed` |
 | Ficha completa de un Pokémon | PokeAPI vía `fetch` con `revalidate` de 30 días, más ISR de página de 24 h | on-demand, cacheada |
 
 De ahí se desprende que:
@@ -75,6 +78,24 @@ De ahí se desprende que:
 
 El dataset está commiteado a propósito: es lo que permite que el repo funcione recién clonado
 y que el deploy no dependa de PokeAPI en runtime.
+
+Se puede regenerar una parte sola en lugar de todo:
+
+```bash
+node scripts/seed.mjs --only=game-dex   # index | moves | version-groups | game-dex
+```
+
+### Aparecer en un juego vs. tener learnset
+
+Son dos cosas distintas y la app usa cada una donde corresponde:
+
+- **Pokédex regional** (`data/game-dex.json`) — quién se puede conseguir realmente en ese juego.
+  Es lo que usa el filtro de juego del home. Colosseum y XD quedan fuera del filtro porque
+  PokeAPI no publica dex regional para esos dos.
+- **Learnset por version-group** — para qué juegos hay datos de movimientos de ese Pokémon. Es
+  lo que usan la tabla de movimientos de la ficha y el selector del simulador de combates. Un
+  juego de Gen III trae movimientos de las tres generaciones anteriores completas, así que
+  sirve para movepools pero **no** para responder "quién aparece acá".
 
 ## Lógica de tipos
 

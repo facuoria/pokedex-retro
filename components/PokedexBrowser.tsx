@@ -25,7 +25,8 @@ const SORTS: { value: string; label: string }[] = [
 interface Props {
   initialItems: PokedexIndexEntry[];
   initialTotal: number;
-  versionGroups: VersionGroup[];
+  /** Juegos con Pokedex regional conocida, con su cantidad de Pokemon nativos. */
+  versionGroups: (VersionGroup & { nativeCount?: number })[];
 }
 
 /**
@@ -221,6 +222,7 @@ export function PokedexBrowser({ initialItems, initialTotal, versionGroups }: Pr
             {versionGroups.map((vg) => (
               <option key={vg.name} value={vg.name}>
                 {vg.label}
+                {vg.nativeCount ? ` (${vg.nativeCount})` : ''}
               </option>
             ))}
           </select>

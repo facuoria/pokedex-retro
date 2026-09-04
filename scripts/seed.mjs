@@ -125,23 +125,74 @@ async function buildMoveIndex() {
   return Object.fromEntries(moves);
 }
 
+/**
+ * Pokedex regional de cada juego: que Pokemon aparecen NATIVAMENTE ahi.
+ *
+ * No se puede derivar del learnset: un juego de Gen III tiene datos de
+ * movimientos para las tres generaciones anteriores completas, aunque en el
+ * juego solo se consigan los de su dex regional.
+ */
+async function buildGameDex(versionGroups) {
+  const dexCache = new Map();
+
+  async function speciesOf(dexName) {
+    if (!dexCache.has(dexName)) {
+      const data = await getJson(`${API}/pokedex/${dexName}`);
+      const ids = data.pokemon_entries
+        .map((entry) => Number(entry.pokemon_species.url.split('/').filter(Boolean).pop()))
+        .filter((id) => id >= 1 && id <= MAX_ID);
+      dexCache.set(dexName, ids);
+    }
+    return dexCache.get(dexName);
+  }
+
+  const result = {};
+  for (const group of versionGroups) {
+    const data = await getJson(`${API}/version-group/${group.name}`);
+    const dexNames = data.pokedexes.map((p) => p.name);
+    if (dexNames.length === 0) continue; // Colosseum y XD no tienen dex regional
+
+    const ids = new Set();
+    for (const dexName of dexNames) {
+      for (const id of await speciesOf(dexName)) ids.add(id);
+    }
+    result[group.name] = [...ids].sort((a, b) => a - b);
+  }
+  return result;
+}
+
 async function main() {
+  const only = process.argv.find((arg) => arg.startsWith('--only='))?.slice(7);
+  const should = (part) => !only || only === part;
   await mkdir(OUT_DIR, { recursive: true });
 
   console.log('› Descargando version-groups…');
   const versionGroups = await buildVersionGroups();
-  await writeFile(path.join(OUT_DIR, 'version-groups.json'), JSON.stringify(versionGroups, null, 0));
-  console.log(`  ${versionGroups.length} grupos de versión`);
+  if (should('version-groups')) {
+    await writeFile(path.join(OUT_DIR, 'version-groups.json'), JSON.stringify(versionGroups, null, 0));
+    console.log(`  ${versionGroups.length} grupos de versión`);
+  }
 
-  console.log(`› Descargando ${MAX_ID} Pokémon (concurrencia ${CONCURRENCY})…`);
-  const index = await buildPokemonIndex();
-  await writeFile(path.join(OUT_DIR, 'pokedex-index.json'), JSON.stringify(index, null, 0));
-  console.log(`  ${index.length} Pokémon en el índice`);
+  if (should('game-dex')) {
+    console.log('› Descargando pokedex regionales…');
+    const gameDex = await buildGameDex(versionGroups);
+    await writeFile(path.join(OUT_DIR, 'game-dex.json'), JSON.stringify(gameDex, null, 0));
+    console.log(`  ${Object.keys(gameDex).length} juegos con dex regional`);
+  }
 
-  console.log('› Descargando catálogo de movimientos…');
-  const moves = await buildMoveIndex();
-  await writeFile(path.join(OUT_DIR, 'moves.json'), JSON.stringify(moves, null, 0));
-  console.log(`  ${Object.keys(moves).length} movimientos`);
+  if (should('index')) {
+    console.log(`› Descargando ${MAX_ID} Pokémon (concurrencia ${CONCURRENCY})…`);
+    const index = await buildPokemonIndex();
+    await writeFile(path.join(OUT_DIR, 'pokedex-index.json'), JSON.stringify(index, null, 0));
+    console.log(`  ${index.length} Pokémon en el índice`);
+  }
+
+  if (should('moves')) {
+    console.log('› Descargando catálogo de movimientos…');
+    const moves = await buildMoveIndex();
+    await writeFile(path.join(OUT_DIR, 'moves.json'), JSON.stringify(moves, null, 0));
+    console.log(`  ${Object.keys(moves).length} movimientos`);
+  }
 
   console.log('✓ Listo.');
 }
