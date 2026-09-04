@@ -38,7 +38,16 @@ export function PokedexBrowser({ initialItems, initialTotal, versionGroups }: Pr
   const searchParams = useSearchParams();
 
   const filterKey = searchParams.toString();
-  const initialKey = useRef(filterKey);
+
+  /**
+   * Ultima combinacion de filtros efectivamente pedida. Arranca con la del SSR
+   * para no repetir esa consulta al montar.
+   *
+   * Tiene que ir actualizandose: si se compara siempre contra la del montaje,
+   * volver al estado inicial (limpiar un filtro, o pasar de desc a asc) parece
+   * "sin cambios" y el grid se queda con los resultados viejos.
+   */
+  const lastFetchedKey = useRef(filterKey);
 
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -65,7 +74,9 @@ export function PokedexBrowser({ initialItems, initialTotal, versionGroups }: Pr
 
   // Recarga la primera pagina cuando cambian los filtros.
   useEffect(() => {
-    if (filterKey === initialKey.current) return;
+    if (filterKey === lastFetchedKey.current) return;
+    lastFetchedKey.current = filterKey;
+
     const controller = new AbortController();
     setLoading(true);
     const timer = setTimeout(async () => {
