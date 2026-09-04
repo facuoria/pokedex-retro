@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scrollbar-color: #39434a #0d0f10;
+  }
+
+  body {
+    @apply bg-ink-900 text-bone font-sans antialiased;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+
+  /* Sprites nitidos: nada de suavizado en pixel art. */
+  img[data-pixel='true'] {
+    image-rendering: pixelated;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0d0f10;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #39434a;
+    border: 2px solid #0d0f10;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5a666e;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ffcb05;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Panel base: borde grueso, sombra dura, sin blur. */
+  .panel {
+    @apply border-2 border-ink-500 bg-ink-800 shadow-hard;
+  }
+
+  .panel-flat {
+    @apply border-2 border-ink-500 bg-ink-800;
+  }
+
+  .panel-heading {
+    @apply border-b-2 border-ink-500 bg-ink-700 px-3 py-2 font-pixel text-[10px] uppercase tracking-wider text-bone/80;
+  }
+
+  /* Boton estilo consola: se "hunde" al presionar. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-ink-500 bg-ink-700 px-3 py-2
+           font-pixel text-[10px] uppercase leading-none tracking-wide text-bone shadow-hard-sm
+           transition-[transform,box-shadow,background-color] duration-75
+           hover:bg-ink-600 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
+  }
+
+  .btn-primary {
+    @apply border-dex-darkred bg-dex-red text-white hover:bg-[#e14238];
+  }
+
+  .btn-active {
+    @apply border-dex-yellow bg-ink-600 text-dex-yellow;
+  }
+
+  .field {
+    @apply w-full border-2 border-ink-500 bg-ink-900 px-3 py-2 text-sm text-bone
+           placeholder:text-ink-400 focus:border-dex-yellow focus:outline-none;
+  }
+
+  .chip {
+    @apply inline-flex items-center border-2 border-black/50 px-2 py-1 font-pixel text-[9px]
+           uppercase leading-none tracking-wide text-white shadow-hard-sm;
+  }
+
+  .skeleton {
+    @apply animate-pulse border-2 border-ink-600 bg-ink-700;
+  }
+
+  /* Marco tipo pantalla de Game Boy para el hero. */
+  .gb-screen {
+    @apply border-2 border-screen-ink bg-screen-bg text-screen-ink;
+    box-shadow:
+      inset 0 0 0 2px rgba(15, 56, 15, 0.25),
+      4px 4px 0 0 rgba(0, 0, 0, 0.85);
+  }
+}
+
+@layer utilities {
+  .text-shadow-pixel {
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+  }
+
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.12) 0px,
+      rgba(0, 0, 0, 0.12) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
