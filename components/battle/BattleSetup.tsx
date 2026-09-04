@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TypeBadge } from '@/components/TypeBadge';
 import { padId } from '@/lib/constants';
 import { spriteUrl, type VersionGroup } from '@/lib/pokedex';
@@ -16,8 +16,14 @@ interface Choice {
 }
 
 interface Props {
-  versionGroups: VersionGroup[];
   onReady: (player: Fighter, rival: Fighter, generation: number) => void;
+}
+
+/** Juegos en los que ese Pokemon tiene movimientos por nivel. */
+async function fetchGames(name: string): Promise<VersionGroup[]> {
+  const res = await fetch(`/api/battle-games?name=${encodeURIComponent(name)}`);
+  if (!res.ok) return [];
+  return (await res.json()).games ?? [];
 }
 
 /** Buscador con autocompletado para elegir un combatiente. */
@@ -152,20 +158,54 @@ function FighterPicker({
 }
 
 /** Pantalla de configuracion previa al combate. */
-export function BattleSetup({ versionGroups, onReady }: Props) {
-  const games = [...versionGroups].sort((a, b) => b.order - a.order);
-
+export function BattleSetup({ onReady }: Props) {
   const [player, setPlayer] = useState<Choice | null>(null);
   const [rival, setRival] = useState<Choice | null>(null);
   const [playerLevel, setPlayerLevel] = useState(50);
   const [rivalLevel, setRivalLevel] = useState(50);
-  const [game, setGame] = useState(games[0]?.name ?? 'scarlet-violet');
+  const [playerGames, setPlayerGames] = useState<VersionGroup[] | null>(null);
+  const [rivalGames, setRivalGames] = useState<VersionGroup[] | null>(null);
+  const [game, setGame] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Solo tiene sentido pelear en un juego donde AMBOS tengan learnset por nivel.
+  const loadingGames = Boolean((player && !playerGames) || (rival && !rivalGames));
+  const games = useMemo(
+    () =>
+      playerGames && rivalGames
+        ? playerGames.filter((vg) => rivalGames.some((other) => other.name === vg.name))
+        : [],
+    [playerGames, rivalGames],
+  );
+
+  // Al cambiar los combatientes, se recalcula la lista y se elige el juego mas
+  // nuevo que sirva para los dos.
+  useEffect(() => {
+    if (games.length === 0) {
+      setGame('');
+      return;
+    }
+    setGame((current) =>
+      games.some((vg) => vg.name === current) ? current : games[0].name,
+    );
+  }, [games]);
+
+  async function choose(side: 'player' | 'rival', choice: Choice) {
+    if (side === 'player') {
+      setPlayer(choice);
+      setPlayerGames(null);
+      setPlayerGames(await fetchGames(choice.name));
+    } else {
+      setRival(choice);
+      setRivalGames(null);
+      setRivalGames(await fetchGames(choice.name));
+    }
+  }
+
   async function pickRandom() {
     const res = await fetch('/api/random');
-    setRival(await res.json());
+    await choose('rival', await res.json());
   }
 
   async function fetchFighter(name: string, level: number) {
@@ -180,9 +220,7 @@ export function BattleSetup({ versionGroups, onReady }: Props) {
   function movepoolProblem(data: any, level: number): string | null {
     if (data.moves.length > 0) return null;
     const juego = games.find((g) => g.name === game)?.label ?? game;
-    return data.availableInGame
-      ? `${data.label} todavia no aprende ningun movimiento a nivel ${level} en ${juego}. Subile el nivel.`
-      : `${data.label} no aparece en ${juego}. Elegí otro juego para este combate.`;
+    return `${data.label} no aprende ningun movimiento por nivel hasta el nivel ${level} en ${juego}. Probá subiendo el nivel o cambiando de juego.`;
   }
 
   async function start() {
@@ -220,14 +258,14 @@ export function BattleSetup({ versionGroups, onReady }: Props) {
         <FighterPicker
           title="Tu Pokemon"
           choice={player}
-          onPick={setPlayer}
+          onPick={(choice) => choose('player', choice)}
           level={playerLevel}
           onLevel={setPlayerLevel}
         />
         <FighterPicker
           title="Rival"
           choice={rival}
-          onPick={setRival}
+          onPick={(choice) => choose('rival', choice)}
           onRandom={pickRandom}
           level={rivalLevel}
           onLevel={setRivalLevel}
@@ -242,15 +280,32 @@ export function BattleSetup({ versionGroups, onReady }: Props) {
           <select
             value={game}
             onChange={(e) => setGame(e.target.value)}
-            className="field font-pixel text-[10px]"
+            disabled={games.length === 0}
+            className="field font-pixel text-[10px] disabled:opacity-50"
           >
-            {games.map((vg) => (
-              <option key={vg.name} value={vg.name}>
-                {vg.label}
+            {games.length === 0 ? (
+              <option value="">
+                {loadingGames
+                  ? 'Buscando juegos en comun...'
+                  : 'Elegí los dos Pokémon primero'}
               </option>
-            ))}
+            ) : (
+              games.map((vg) => (
+                <option key={vg.name} value={vg.name}>
+                  {vg.label}
+                </option>
+              ))
+            )}
           </select>
         </label>
+
+        <p className="mt-2 text-xs leading-relaxed text-ink-400">
+          {games.length > 0
+            ? `Solo se listan los ${games.length} juegos en los que ambos aprenden movimientos por nivel.`
+            : player && rival && !loadingGames
+              ? 'No hay ningún juego en el que los dos aprendan movimientos por nivel. Probá con otra combinación.'
+              : 'La lista se arma con los juegos que comparten los dos Pokémon.'}
+        </p>
       </div>
 
       {error && (
@@ -260,10 +315,10 @@ export function BattleSetup({ versionGroups, onReady }: Props) {
       <button
         type="button"
         onClick={start}
-        disabled={!player || !rival || loading}
+        disabled={!player || !rival || !game || loading || loadingGames}
         className="btn btn-primary w-full justify-center py-4 text-[12px] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {loading ? 'Preparando...' : '¡Comenzar combate!'}
+        {loading ? 'Preparando...' : loadingGames ? 'Cargando juegos...' : '¡Comenzar combate!'}
       </button>
 
       <section className="panel">

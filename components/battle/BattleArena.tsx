@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { BattleScreen } from '@/components/battle/BattleScreen';
 import { BattleSetup } from '@/components/battle/BattleSetup';
 import type { Fighter } from '@/lib/battle-engine';
-import type { VersionGroup } from '@/lib/pokedex';
 
 interface Matchup {
   player: Fighter;
@@ -19,7 +18,7 @@ const restore = (fighter: Fighter): Fighter => ({ ...fighter, currentHp: fighter
  * `round` remonta BattleScreen para que la revancha arranque de cero sin
  * arrastrar estado del combate anterior.
  */
-export function BattleArena({ versionGroups }: { versionGroups: VersionGroup[] }) {
+export function BattleArena() {
   const [matchup, setMatchup] = useState<Matchup | null>(null);
   const [round, setRound] = useState(0);
   const [battlesPlayed, setBattlesPlayed] = useState(0);
@@ -27,7 +26,6 @@ export function BattleArena({ versionGroups }: { versionGroups: VersionGroup[] }
   if (!matchup) {
     return (
       <BattleSetup
-        versionGroups={versionGroups}
         onReady={(player, rival, generation) => {
           setMatchup({ player, rival, generation });
           setRound((value) => value + 1);

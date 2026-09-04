@@ -135,6 +135,10 @@ Fórmulas implementadas:
   ×½ pesa 0.3, e inmune queda prácticamente descartado), así que prioriza lo súper eficaz sin
   ser predecible.
 
+El selector de juego solo lista los version-groups en los que **ambos** Pokémon tienen learnset
+por nivel: no alcanza con que aparezcan en el juego, porque hay títulos (Champions, por ejemplo)
+donde PokeAPI publica los movimientos con otro método y no por nivel.
+
 Simplificaciones deliberadas de esta versión, aclaradas también en la propia UI: sin objetos,
 clima, terreno ni cambios de Pokémon; sin estados alterados ni efectos secundarios (los
 movimientos de estado se anuncian pero no hacen nada); sin PP y sin fallos de precisión. Un

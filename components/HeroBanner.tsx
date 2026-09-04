@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import { POKEDEX } from '@/lib/pokedex';
 
 /**
- * Portada de la home. Un solo CTA principal (el buscador esta justo abajo) mas
- * el acceso a la feature nueva; el resto de las secciones ya vive en el nav.
+ * Portada de la home: solo presenta la app. Sin botones, porque el buscador
+ * esta justo abajo y las secciones ya viven en el nav superior.
  */
 export function HeroBanner() {
   return (
@@ -22,21 +21,6 @@ export function HeroBanner() {
         debilidades ya calculadas, mirá qué movimientos aprende cada uno en cada juego y poné a
         prueba tus estrategias en combates simulados.
       </p>
-
-      <div className="mt-5 flex flex-wrap gap-2">
-        <a
-          href="#buscador"
-          className="btn border-screen-ink bg-screen-dark px-4 py-3 text-[11px] text-screen-bg hover:bg-screen-ink"
-        >
-          Buscar un Pokemon
-        </a>
-        <Link
-          href="/combate"
-          className="btn border-screen-ink bg-transparent px-4 py-3 text-[11px] text-screen-ink hover:bg-screen-mid"
-        >
-          ¡A luchar!
-        </Link>
-      </div>
     </section>
   );
 }

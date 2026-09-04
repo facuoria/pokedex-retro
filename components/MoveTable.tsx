@@ -11,7 +11,7 @@ interface Props {
   versionGroupLabel: string;
 }
 
-const METHODS: MoveLearn['method'][] = ['level-up', 'machine', 'tutor', 'egg'];
+const METHODS: MoveLearn['method'][] = ['level-up', 'machine', 'tutor', 'egg', 'other'];
 
 const CLASS_STYLES: Record<string, string> = {
   physical: 'bg-[#C92112] text-white',

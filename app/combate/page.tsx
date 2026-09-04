@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { BattleArena } from '@/components/battle/BattleArena';
-import { VERSION_GROUPS } from '@/lib/pokedex';
 
 export const metadata: Metadata = {
   title: '¡A luchar!',
@@ -20,7 +19,7 @@ export default function CombatePage() {
         </p>
       </header>
 
-      <BattleArena versionGroups={VERSION_GROUPS} />
+      <BattleArena />
     </div>
   );
 }
