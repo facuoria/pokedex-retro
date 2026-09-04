@@ -121,15 +121,17 @@ export function PokedexBrowser({ initialItems, initialTotal, versionGroups }: Pr
 
   return (
     <div className="space-y-5">
-      <SearchBox
-        value={q}
-        onQueryChange={(value) =>
-          updateParams((params) => {
-            if (value) params.set('q', value);
-            else params.delete('q');
-          })
-        }
-      />
+      <div id="buscador" className="scroll-mt-24">
+        <SearchBox
+          value={q}
+          onQueryChange={(value) =>
+            updateParams((params) => {
+              if (value) params.set('q', value);
+              else params.delete('q');
+            })
+          }
+        />
+      </div>
 
       {/* Filtro por tipo */}
       <div className="panel-flat p-3">

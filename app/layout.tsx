@@ -25,6 +25,7 @@ const NAV = [
   { href: '/', label: 'Pokedex' },
   { href: '/type-chart', label: 'Tipos' },
   { href: '/compare', label: 'Comparar' },
+  { href: '/combate', label: '¡A luchar!' },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

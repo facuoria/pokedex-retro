@@ -1,8 +1,8 @@
 # Pokédex Retro
 
 Pokédex interactiva de la Gen I a la Gen IX, pensada como herramienta de consulta mientras jugás:
-debilidades ya calculadas para tipos duales, movepool filtrado **por juego** y tabla de tipos
-18×18 interactiva. Estética pixel art / Game Boy.
+debilidades ya calculadas para tipos duales, movepool filtrado **por juego**, tabla de tipos
+18×18 interactiva y combates simulados por turnos. Estética pixel art / Game Boy.
 
 **Next.js 14 (App Router) · TypeScript · Tailwind CSS**, con datos de [PokeAPI](https://pokeapi.co).
 Sin API keys, sin base de datos y sin variables de entorno.
@@ -24,6 +24,9 @@ Sin API keys, sin base de datos y sin variables de entorno.
 - **Tabla de tipos 18×18** interactiva, con selector de generación y resumen combinado para
   cualquier par de tipos.
 - **Comparador** de dos Pokémon lado a lado.
+- **Combates simulados** (*¡A luchar!*) — 1 contra 1 por turnos contra una IA, con stats
+  calculadas por nivel, movimientos del juego que elijas, barras de HP, log de batalla y un
+  panel de ayuda con las debilidades de tu Pokémon.
 
 ## Cómo correrlo
 
@@ -43,7 +46,7 @@ paso extra.
 | --- | --- |
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` / `npm start` | Build de producción y servirlo |
-| `npm test` | Tests de la lógica de tipos |
+| `npm test` | Tests de la lógica de tipos y del motor de combate (40 casos) |
 | `npm run seed` | Regenera el dataset desde PokeAPI (~1000 requests, ~2 min) |
 
 `npm run seed` solo es necesario si querés actualizar los datos, por ejemplo cuando sale una
@@ -100,11 +103,45 @@ La tabla no siempre fue la misma, y el selector de generación de `/type-chart` 
 | II–V | Sin Hada. Acero resiste Fantasma y Siniestro (×½). |
 | VI–IX | Tabla vigente. |
 
-`npm test` corre 13 casos que cubren inmunidades, tipos duales y cada una de esas variaciones.
+`npm test` corre 13 casos que cubren inmunidades, tipos duales y cada una de esas variaciones,
+más 27 del motor de combate.
 
-**Limitación conocida:** las categorías físico/especial de los movimientos son las actuales.
-Antes de la Gen IV la categoría dependía del tipo del movimiento y no del movimiento en sí, así
-que en los juegos viejos esa columna no refleja lo que pasaba en pantalla.
+**Limitación conocida:** los datos de cada movimiento (potencia, precisión y categoría) son los
+**actuales**, no los históricos. Dos consecuencias: antes de la Gen IV la categoría
+física/especial dependía del tipo del movimiento y no del movimiento en sí, y varios
+movimientos cambiaron de potencia entre generaciones (Burbuja pasó de 20 a 40, por ejemplo).
+La tabla de tipos sí respeta la generación elegida.
+
+## Motor de combate
+
+`lib/battle-engine.ts` es un módulo puro: no importa React ni toca la red, y toda la
+aleatoriedad entra por un parámetro `rng`, lo que permite fijarla en los tests.
+
+```ts
+calculateStat(108, 78, true)                       // 280 (HP, IV 31, EV 0)
+selectMovesForLevel(movepool, 36)                  // los 4 ultimos aprendidos por nivel
+calculateDamage(atacante, defensor, movimiento)    // { damage, effectiveness, critical, stab }
+resolveTurn(jugador, rival, movimiento)            // eventos del turno + estado resultante
+```
+
+Fórmulas implementadas:
+
+- **Stats:** `HP = floor((2*Base + IV) * Nivel/100) + Nivel + 10` y
+  `Stat = floor((2*Base + IV) * Nivel/100) + 5`, con IV 31, EV 0 y naturaleza neutra.
+- **Daño:** `(((2*Nivel/5 + 2) * Poder * (Ataque/Defensa)) / 50 + 2) * STAB * Efectividad *
+  Random(0.85–1) * Crítico`, con STAB 1.5, crítico 1/16 a ×1.5 y la efectividad saliendo del
+  mismo `lib/type-chart.ts` que usa el resto de la app.
+- **IA:** elige al azar pero ponderando por efectividad (×4 pesa 5, ×2 pesa 3, neutro 1,
+  ×½ pesa 0.3, e inmune queda prácticamente descartado), así que prioriza lo súper eficaz sin
+  ser predecible.
+
+Simplificaciones deliberadas de esta versión, aclaradas también en la propia UI: sin objetos,
+clima, terreno ni cambios de Pokémon; sin estados alterados ni efectos secundarios (los
+movimientos de estado se anuncian pero no hacen nada); sin PP y sin fallos de precisión. Un
+combate que llega a 100 turnos sin definirse termina en empate.
+
+El estado del combate se maneja con un `useReducer` que consume los eventos de a uno, para que
+la animación del log no compita con la actualización de los HP.
 
 ## Estructura
 
@@ -114,13 +151,16 @@ app/
   pokemon/[nameOrId]/page.tsx Ficha de detalle (ISR)
   type-chart/page.tsx         Tabla de tipos interactiva
   compare/page.tsx            Comparador
-  api/suggest|pokemon|moves   Rutas de datos (locales, salvo /moves)
+  combate/page.tsx            Simulador de combates
+  api/...                     Rutas de datos (locales, salvo /moves y /battle-pokemon)
 components/
-  PokemonCard  TypeBadge  StatBar  EffectivenessGrid
+  HeroBanner  PokemonCard  TypeBadge  StatBar  EffectivenessGrid
   TypeChartGrid  TypeChartExplorer  MoveTable  MovesSection
   EvolutionChain  SearchBox  PokedexBrowser  SpriteViewer  ComparePicker
+  battle/  BattleArena  BattleSetup  BattleScreen  HpBar  TypeHintPanel
 lib/
   type-chart.ts   Tabla de tipos, cálculo dual y variaciones por generación
+  battle-engine.ts  Stats por nivel, fórmula de daño, IA y turnos (modulo puro)
   pokeapi.ts      Acceso tipado a PokeAPI
   pokedex.ts      Consultas sobre el índice local
   constants.ts    Colores de tipo, stats, generaciones y labels
